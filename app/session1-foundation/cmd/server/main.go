@@ -53,7 +53,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
-🎓 TEACHING NOTES:
+🎓 NOTES:
 
 1. Package main:
    - Entry point của Go application
@@ -93,26 +93,4 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 ❌ Using wrong HTTP method
    → GET vs POST confusion
-
-🏠 HOMEWORK HINTS:
-
-For /hello/{name} endpoint:
-- Use: name := r.PathValue("name")  // Go 1.22+
-- Pattern: "GET /hello/{name}"
-- Response: {"message": "Hello, " + name + "!"}
-
-For /info endpoint:
-- Add server start time as global variable
-- Calculate uptime: time.Since(startTime)
-- Return version string (const)
-
-🔄 NEXT SESSION PREVIEW:
-
-Buổi 2 sẽ add:
-- internal/model/asset.go       (Entity layer)
-- internal/storage/storage.go   (Storage interface)
-- internal/service/service.go   (Business logic)
-- internal/handler/handler.go   (HTTP handlers)
-
-→ Transform từ simple Hello World → Clean Architecture!
 */

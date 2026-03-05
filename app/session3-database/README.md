@@ -1,5 +1,32 @@
 # 🗄️ Buổi 3: Database Integration
 
+## ⚡ Quick Start
+
+```bash
+# 1. Start PostgreSQL database
+docker-compose up -d
+
+# 2. Verify database is running
+docker-compose ps
+
+# 3. Install dependencies
+go mod tidy
+
+# 4. Start the server
+go run cmd/server/main.go
+
+# 5. Test the API (in another terminal)
+curl -X POST http://localhost:8080/assets \
+  -H "Content-Type: application/json" \
+  -d '{"name":"example.com","type":"domain"}'
+
+curl http://localhost:8080/assets
+```
+
+**🎉 The Key Difference:** Restart the server - your data persists! Compare this with Session 2 where restarting lost all data.
+
+---
+
 ## Mục Tiêu
 
 - ✅ Thiết kế database schema
@@ -132,7 +159,7 @@ DB_NAME=mini_asm
 DB_SSLMODE=disable
 ```
 
-## Teaching Flow
+## Flow
 
 ### Step 1: Review Buổi 2 (10 phút)
 

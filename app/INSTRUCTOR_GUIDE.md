@@ -5,7 +5,7 @@
 ### 1. Clone/Setup Repository
 
 ```bash
-cd /path/to/CMC-InternProgram/week1
+cd /path/to/CMC-InternProgram/app
 ```
 
 ### 2. Verify Structure
