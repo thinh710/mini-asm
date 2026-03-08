@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"mini-asm/internal/database"
 	"mini-asm/internal/handler"
 	"mini-asm/internal/service"
 	"mini-asm/internal/storage/postgres"
@@ -42,18 +42,11 @@ func main() {
 	// ============================================
 
 	// Open database connection
-	db, err := sql.Open("postgres", connStr)
+	db, err := database.ConnectWithRetry(connStr, 5)
 	if err != nil {
-		log.Fatal("❌ Failed to open database:", err)
+		log.Fatalf("❌ Could not connect to database after retries: %v", err)
 	}
 	defer db.Close()
-
-	// Verify connection with ping
-	if err := db.Ping(); err != nil {
-		log.Fatal("❌ Failed to ping database:", err)
-	}
-
-	log.Println("✅ Database connected successfully")
 
 	// Optional: Configure connection pool
 	db.SetMaxOpenConns(25)               // Maximum open connections
@@ -80,7 +73,7 @@ func main() {
 	// 3. Initialize Handler Layer (Presentation / HTTP)
 	//    ✨ NO CHANGES! Handler doesn't care about storage implementation
 	assetHandler := handler.NewAssetHandler(assetService)
-	healthHandler := handler.NewHealthHandler()
+	healthHandler := handler.NewHealthHandler(db)
 	log.Println("✅ Handlers initialized")
 
 	// ============================================
@@ -91,6 +84,15 @@ func main() {
 
 	// Health check
 	mux.HandleFunc("GET /health", healthHandler.Check)
+	// BÀi 1
+	mux.HandleFunc("GET /assets/stats", assetHandler.GetStats)
+	mux.HandleFunc("GET /assets/count", assetHandler.CountAssets)
+	// bài 2
+	mux.HandleFunc("POST /assets/batch", assetHandler.BatchCreate)
+	//bài 3
+	mux.HandleFunc("DELETE /assets/batch", assetHandler.BatchDelete)
+	//bài 7
+	mux.HandleFunc("GET /assets/search", assetHandler.SearchAssets)
 
 	// Asset CRUD operations
 	mux.HandleFunc("POST /assets", assetHandler.CreateAsset)        // Create

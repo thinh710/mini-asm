@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"mini-asm/internal/model"
 	"sort"
 	"strings"
@@ -151,6 +152,124 @@ func (m *MemoryStorage) Search(query string) ([]*model.Asset, error) {
 	})
 
 	return assets, nil
+}
+
+// bài 1
+func (m *MemoryStorage) GetStats(ctx context.Context) (*model.Stats, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	stats := &model.Stats{
+		ByType:   make(map[string]int),
+		ByStatus: make(map[string]int),
+	}
+
+	for _, asset := range m.data {
+		stats.Total++
+		stats.ByType[asset.Type]++
+		stats.ByStatus[asset.Status]++
+	}
+
+	return stats, nil
+}
+
+func (m *MemoryStorage) CountByFilter(ctx context.Context, assetType, status string) (int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	count := 0
+	for _, asset := range m.data {
+		if assetType != "" && asset.Type != assetType {
+			continue
+		}
+		if status != "" && asset.Status != status {
+			continue
+		}
+		count++
+	}
+
+	return count, nil
+}
+
+// bài 2
+func (m *MemoryStorage) BatchCreate(ctx context.Context, assets []*model.Asset) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	ids := make([]string, 0, len(assets))
+	for _, asset := range assets {
+		if _, exists := m.data[asset.ID]; exists {
+			return nil, model.ErrDuplicate
+		}
+		m.data[asset.ID] = asset
+		ids = append(ids, asset.ID)
+	}
+	return ids, nil
+}
+
+// bài 3
+func (m *MemoryStorage) BatchDelete(ctx context.Context, ids []string) (int, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deleted, notFound := 0, 0
+	for _, id := range ids {
+		if _, exists := m.data[id]; !exists {
+			notFound++
+			continue
+		}
+		delete(m.data, id)
+		deleted++
+	}
+	return deleted, notFound, nil
+}
+
+// bài 6 - pagination + filtering
+func (m *MemoryStorage) ListAssets(
+	ctx context.Context,
+	assetType string,
+	status string,
+	limit int,
+	offset int,
+) ([]*model.Asset, int, error) {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Filter assets
+	filtered := make([]*model.Asset, 0)
+
+	for _, asset := range m.data {
+
+		if assetType != "" && asset.Type != assetType {
+			continue
+		}
+
+		if status != "" && asset.Status != status {
+			continue
+		}
+
+		filtered = append(filtered, asset)
+	}
+
+	// Sort newest first
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].CreatedAt.After(filtered[j].CreatedAt)
+	})
+
+	total := len(filtered)
+
+	// Pagination
+	if offset > total {
+		return []*model.Asset{}, total, nil
+	}
+
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	return filtered[offset:end], total, nil
 }
 
 /*

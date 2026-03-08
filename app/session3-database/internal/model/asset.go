@@ -13,6 +13,12 @@ type Asset struct {
 	UpdatedAt time.Time `json:"updated_at"` // Auto-updated
 }
 
+type Stats struct {
+	Total    int            `json:"total"`
+	ByType   map[string]int `json:"by_type"`
+	ByStatus map[string]int `json:"by_status"`
+}
+
 // Asset types - using constants for type safety
 const (
 	TypeDomain  = "domain"

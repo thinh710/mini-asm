@@ -6,6 +6,8 @@ import (
 	"mini-asm/internal/model"
 	"mini-asm/internal/service"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // AssetHandler handles HTTP requests for asset operations
@@ -59,25 +61,43 @@ func (h *AssetHandler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 
 // ListAssets handles GET /assets
 func (h *AssetHandler) ListAssets(w http.ResponseWriter, r *http.Request) {
-	// Get query parameters for filtering/searching
+
+	// Query params
 	assetType := r.URL.Query().Get("type")
 	status := r.URL.Query().Get("status")
-	search := r.URL.Query().Get("search")
 
-	var assets []*model.Asset
-	var err error
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
 
-	// Determine which operation to perform
-	if search != "" {
-		// Search by name
-		assets, err = h.service.SearchAssets(search)
-	} else if assetType != "" || status != "" {
-		// Filter by type and/or status
-		assets, err = h.service.FilterAssets(assetType, status)
-	} else {
-		// Get all assets
-		assets, err = h.service.GetAllAssets()
+	page := 1
+	limit := 20
+
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
 	}
+
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset := (page - 1) * limit
+
+	// Call service
+	assets, total, err := h.service.ListAssets(
+		r.Context(),
+		assetType,
+		status,
+		limit,
+		offset,
+	)
 
 	if err != nil {
 		statusCode := mapErrorToStatus(err)
@@ -85,12 +105,21 @@ func (h *AssetHandler) ListAssets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return empty array instead of null if no assets
 	if assets == nil {
 		assets = []*model.Asset{}
 	}
 
-	RespondJSON(w, http.StatusOK, assets)
+	totalPages := (total + limit - 1) / limit
+
+	RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": assets,
+		"pagination": map[string]int{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+		},
+	})
 }
 
 // GetAsset handles GET /assets/{id}
@@ -193,6 +222,109 @@ func RespondError(w http.ResponseWriter, status int, message string) {
 	RespondJSON(w, status, map[string]string{
 		"error": message,
 	})
+}
+
+// bài 1
+func (h *AssetHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.GetStats(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
+func (h *AssetHandler) CountAssets(w http.ResponseWriter, r *http.Request) {
+	t := r.URL.Query().Get("type")
+	s := r.URL.Query().Get("status")
+	count, _ := h.service.CountByFilter(r.Context(), t, s)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"count":   count,
+		"filters": map[string]string{"type": t, "status": s},
+	})
+}
+
+// bài 2
+func (h *AssetHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Assets []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		} `json:"assets"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Convert to service format
+	requests := make([]struct {
+		Name string
+		Type string
+	}, len(req.Assets))
+	for i, a := range req.Assets {
+		requests[i].Name = a.Name
+		requests[i].Type = a.Type
+	}
+
+	ids, err := h.service.BatchCreateAssets(r.Context(), requests)
+	if err != nil {
+		statusCode := mapErrorToStatus(err)
+		RespondError(w, statusCode, err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusCreated, map[string]interface{}{
+		"created": len(ids),
+		"ids":     ids,
+	})
+}
+
+// bài 3
+func (h *AssetHandler) BatchDelete(w http.ResponseWriter, r *http.Request) {
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		RespondError(w, http.StatusBadRequest, "ids parameter required")
+		return
+	}
+
+	ids := strings.Split(idsParam, ",")
+
+	deleted, notFound, err := h.service.BatchDeleteAssets(r.Context(), ids)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]int{
+		"deleted":   deleted,
+		"not_found": notFound,
+	})
+}
+
+// bài 7
+func (h *AssetHandler) SearchAssets(w http.ResponseWriter, r *http.Request) {
+
+	query := r.URL.Query().Get("q")
+
+	if query == "" {
+		http.Error(w, "missing query parameter q", http.StatusBadRequest)
+		return
+	}
+
+	assets, err := h.service.SearchAssets(query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(assets) > 100 {
+		assets = assets[:100]
+	}
+
+	RespondJSON(w, http.StatusOK, assets)
 }
 
 /*

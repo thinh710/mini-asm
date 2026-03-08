@@ -1,8 +1,10 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"mini-asm/internal/config"
 	"mini-asm/internal/model"
@@ -281,6 +283,174 @@ func (p *PostgresStorage) Search(query string) ([]*model.Asset, error) {
 	}
 
 	return assets, nil
+}
+
+// Bài 1
+func (p *PostgresStorage) GetStats(ctx context.Context) (*model.Stats, error) {
+	stats := &model.Stats{
+		ByType:   make(map[string]int),
+		ByStatus: make(map[string]int),
+	}
+
+	// Count total
+	if err := p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM assets").Scan(&stats.Total); err != nil {
+		return nil, fmt.Errorf("failed to count total: %w", err)
+	}
+
+	// Count by type
+	rows, err := p.db.QueryContext(ctx, "SELECT type, COUNT(*) FROM assets GROUP BY type")
+	if err != nil {
+		return nil, fmt.Errorf("failed to count by type: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var t string
+		var c int
+		rows.Scan(&t, &c)
+		stats.ByType[t] = c
+	}
+
+	// Count by status
+	rows2, err := p.db.QueryContext(ctx, "SELECT status, COUNT(*) FROM assets GROUP BY status")
+	if err != nil {
+		return nil, fmt.Errorf("failed to count by status: %w", err)
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var s string
+		var c int
+		rows2.Scan(&s, &c)
+		stats.ByStatus[s] = c
+	}
+
+	return stats, nil
+}
+
+func (p *PostgresStorage) CountByFilter(ctx context.Context, assetType, status string) (int, error) {
+	conditions := []string{}
+	args := []interface{}{}
+	i := 1
+	if assetType != "" {
+		conditions = append(conditions, fmt.Sprintf("type = $%d", i))
+		args = append(args, assetType)
+		i++
+	}
+	if status != "" {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", i))
+		args = append(args, status)
+	}
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var count int
+	p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM assets "+where, args...).Scan(&count)
+	return count, nil
+}
+
+// bài 2
+func (p *PostgresStorage) BatchCreate(ctx context.Context, assets []*model.Asset) ([]string, error) {
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	ids := make([]string, 0, len(assets))
+	for _, asset := range assets {
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO assets (id, name, type, status, created_at, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			asset.ID, asset.Name, asset.Type, asset.Status, asset.CreatedAt, asset.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert %s: %w", asset.Name, err)
+		}
+		ids = append(ids, asset.ID)
+	}
+
+	return ids, tx.Commit()
+}
+
+// bài 3
+func (p *PostgresStorage) BatchDelete(ctx context.Context, ids []string) (int, int, error) {
+	deleted, notFound := 0, 0
+	for _, id := range ids {
+		result, err := p.db.ExecContext(ctx, "DELETE FROM assets WHERE id = $1", id)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to delete %s: %w", id, err)
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			notFound++
+		} else {
+			deleted++
+		}
+	}
+	return deleted, notFound, nil
+}
+
+// bài 6
+func (p *PostgresStorage) ListAssets(
+	ctx context.Context,
+	assetType string,
+	status string,
+	limit int,
+	offset int,
+) ([]*model.Asset, int, error) {
+
+	query := `
+	SELECT id, name, type, status, created_at, updated_at
+	FROM assets
+	WHERE ($1 = '' OR type = $1)
+	AND ($2 = '' OR status = $2)
+	ORDER BY created_at DESC
+	LIMIT $3 OFFSET $4
+	`
+
+	rows, err := p.db.QueryContext(ctx, query, assetType, status, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var assets []*model.Asset
+
+	for rows.Next() {
+		a := &model.Asset{}
+
+		err := rows.Scan(
+			&a.ID,
+			&a.Name,
+			&a.Type,
+			&a.Status,
+			&a.CreatedAt,
+			&a.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, 0, err
+		}
+
+		assets = append(assets, a)
+	}
+
+	var total int
+
+	countQuery := `
+	SELECT COUNT(*)
+	FROM assets
+	WHERE ($1 = '' OR type = $1)
+	AND ($2 = '' OR status = $2)
+	`
+
+	err = p.db.QueryRowContext(ctx, countQuery, assetType, status).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return assets, total, nil
 }
 
 /*
