@@ -10,4 +10,4 @@
 - [x] Bài 4: Connection Retry
 - [x] Bài 5: Health Check
 - [x] Bài 6: Pagination (Bonus)
-- [ ] Bài 7: Search (Bonus)
+- [x] Bài 7: Search (Bonus)
