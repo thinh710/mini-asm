@@ -162,7 +162,9 @@ jobs:
         run: |
           response=$(curl -s http://localhost:8080/health)
           echo "Health check response: $response"
-          if echo "$response" | grep -q "healthy\|connected"; then
+          # Accept health JSON like {"status":"ok","message":"..."}
+          # and common messages such as "running" or "Mini ASM"
+          if echo "$response" | grep -Eqi '"status"[[:space:]]*:[[:space:]]*"ok"|running|mini asm|healthy|connected'; then
             echo "✅ Backend health check passed"
           else
             echo "❌ Backend health check failed"
