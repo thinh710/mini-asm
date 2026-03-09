@@ -1,13 +1,76 @@
-# 🚢 Buổi 6: Frontend Integration & Deployment
+# 🚢 Session 7: Deployment & Containerization
 
-## Mục Tiêu
+## 🎯 Learning Objectives
 
-- ✅ Simple frontend SPA với vanilla JavaScript
-- ✅ CORS configuration
-- ✅ Docker containerization
-- ✅ Docker Compose for full stack
-- ✅ API documentation với Swagger
-- ✅ Deployment basics
+- ✅ Docker containerization for backend and frontend
+- ✅ Multi-stage Docker builds for optimization
+- ✅ Docker Compose for orchestrating multiple services
+- ✅ Production-ready Nginx configuration
+- ✅ Database migrations in containers
+- ✅ Health checks and service monitoring
+- ✅ Deployment best practices
+
+## 🚀 Quick Start
+
+### Option 1: Using Make (Recommended)
+
+```bash
+# Start all services
+make up
+
+# Check status
+make status
+
+# View logs
+make logs
+
+# Stop services
+make down
+```
+
+### Option 2: Using Docker Compose Directly
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Option 3: Using the Deploy Script
+
+```bash
+# Make script executable (first time only)
+chmod +x deploy.sh
+
+# Start services
+./deploy.sh start
+
+# Check status
+./deploy.sh status
+
+# View logs
+./deploy.sh logs
+
+# Stop services
+./deploy.sh stop
+```
+
+## 📦 What Gets Deployed
+
+The deployment includes:
+
+- **Frontend** (React + Vite + Nginx) on port **3000**
+- **Backend** (Go API) on port **8080**
+- **Database** (PostgreSQL) on port **5432**
+- **pgAdmin** (Database GUI) on port **5050** (optional)
 
 ## Full Stack Architecture
 
