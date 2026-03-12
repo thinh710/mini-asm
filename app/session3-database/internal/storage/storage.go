@@ -1,6 +1,9 @@
 package storage
 
-import "mini-asm/internal/model"
+import (
+	"context"
+	"mini-asm/internal/model"
+)
 
 // Storage defines the interface for data access operations
 // This is the contract that any storage implementation must fulfill
@@ -35,6 +38,21 @@ type Storage interface {
 
 	// Search finds assets by partial name match
 	Search(query string) ([]*model.Asset, error)
+	//bài 6
+	ListAssets(
+		ctx context.Context,
+		assetType string,
+		status string,
+		limit int,
+		offset int,
+	) ([]*model.Asset, int, error)
+	//bài 1
+	GetStats(ctx context.Context) (*model.Stats, error)
+	CountByFilter(ctx context.Context, assetType, status string) (int, error)
+	//bài 2
+	BatchCreate(ctx context.Context, assets []*model.Asset) ([]string, error)
+	//bài 3
+	BatchDelete(ctx context.Context, ids []string) (int, int, error)
 }
 
 /*

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"mini-asm/internal/model"
 	"mini-asm/internal/storage"
 	"time"
@@ -140,6 +142,78 @@ func (s *AssetService) SearchAssets(query string) ([]*model.Asset, error) {
 	}
 
 	return s.storage.Search(query)
+}
+
+// bài 1
+func (s *AssetService) GetStats(ctx context.Context) (*model.Stats, error) {
+	return s.storage.GetStats(ctx)
+}
+
+func (s *AssetService) CountByFilter(ctx context.Context, assetType, status string) (int, error) {
+	return s.storage.CountByFilter(ctx, assetType, status)
+}
+
+// bài 2
+func (s *AssetService) BatchCreateAssets(ctx context.Context, requests []struct {
+	Name string
+	Type string
+}) ([]string, error) {
+	if len(requests) == 0 {
+		return nil, model.ErrInvalidInput
+	}
+	if len(requests) > 100 {
+		return nil, fmt.Errorf("max 100 assets per request")
+	}
+
+	assets := make([]*model.Asset, 0, len(requests))
+	for _, req := range requests {
+		if req.Name == "" {
+			return nil, model.ErrEmptyName
+		}
+		if !model.IsValidType(req.Type) {
+			return nil, model.ErrInvalidType
+		}
+		assets = append(assets, &model.Asset{
+			ID:        uuid.New().String(),
+			Name:      req.Name,
+			Type:      req.Type,
+			Status:    model.StatusActive,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+	}
+
+	return s.storage.BatchCreate(ctx, assets)
+}
+
+// bài 3
+func (s *AssetService) BatchDeleteAssets(ctx context.Context, ids []string) (int, int, error) {
+	if len(ids) == 0 {
+		return 0, 0, model.ErrInvalidInput
+	}
+	return s.storage.BatchDelete(ctx, ids)
+}
+
+// bài 6
+func (s *AssetService) ListAssets(
+	ctx context.Context,
+	assetType string,
+	status string,
+	limit int,
+	offset int,
+) ([]*model.Asset, int, error) {
+
+	// Validate filters
+	if assetType != "" && !model.IsValidType(assetType) {
+		return nil, 0, model.ErrInvalidType
+	}
+
+	if status != "" && !model.IsValidStatus(status) {
+		return nil, 0, model.ErrInvalidStatus
+	}
+
+	// Call storage layer
+	return s.storage.ListAssets(ctx, assetType, status, limit, offset)
 }
 
 /*
