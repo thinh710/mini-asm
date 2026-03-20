@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
+<<<<<<< HEAD
 // corsMiddleware cho phép frontend gọi API từ browser
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,6 +30,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+=======
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 func main() {
 	log.Println("🚀 Starting Mini ASM Server (Session 5 - EASM Scanning)...")
 
@@ -80,7 +83,10 @@ func main() {
 	// Asset CRUD operations (Session 2-4)
 	mux.HandleFunc("POST /assets", assetHandler.CreateAsset)
 	mux.HandleFunc("GET /assets", assetHandler.ListAssets)
+<<<<<<< HEAD
 	mux.HandleFunc("GET /assets/export", assetHandler.ExportAssets)
+=======
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 	mux.HandleFunc("GET /assets/{id}", assetHandler.GetAsset)
 	mux.HandleFunc("PUT /assets/{id}", assetHandler.UpdateAsset)
 	mux.HandleFunc("DELETE /assets/{id}", assetHandler.DeleteAsset)
@@ -160,7 +166,11 @@ func main() {
 	log.Println()
 	log.Println("Press Ctrl+C to stop")
 
+<<<<<<< HEAD
 	if err := http.ListenAndServe(addr, corsMiddleware(mux)); err != nil {
+=======
+	if err := http.ListenAndServe(addr, mux); err != nil {
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 		log.Fatal("❌ Server failed to start:", err)
 	}
 }

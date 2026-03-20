@@ -234,6 +234,7 @@ func (s *PortScanner) Scan(asset *model.Asset) ([]PortScanResult, error) {
 	// }
 	// return results, nil
 
+<<<<<<< HEAD
 	results := []PortScanResult{}
 	for _, port := range s.commonPorts {
 		if s.scanPort(target, port) {
@@ -246,6 +247,9 @@ func (s *PortScanner) Scan(asset *model.Asset) ([]PortScanResult, error) {
 		}
 	}
 	return results, nil
+=======
+	return nil, fmt.Errorf("not implemented - student exercise")
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 }
 
 // isAuthorized checks if target is in the authorized list
@@ -273,6 +277,7 @@ func (s *PortScanner) isAuthorized(target string) bool {
 // scanPort attempts to connect to a single port
 // TODO for students: Implement this method
 func (s *PortScanner) scanPort(target string, port int) bool {
+<<<<<<< HEAD
 	address := fmt.Sprintf("%s:%d", target, port)
 	conn, err := net.DialTimeout("tcp", address, s.timeout)
 	if err != nil {
@@ -280,11 +285,24 @@ func (s *PortScanner) scanPort(target string, port int) bool {
 	}
 	conn.Close()
 	return true
+=======
+	// Example implementation:
+	// address := fmt.Sprintf("%s:%d", target, port)
+	// conn, err := net.DialTimeout("tcp", address, s.timeout)
+	// if err != nil {
+	//     return false // Port closed or filtered
+	// }
+	// conn.Close()
+	// return true // Port open
+
+	return false // Placeholder
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 }
 
 // detectService attempts to identify the service running on an open port
 // TODO for students: Implement service detection (banner grabbing)
 func (s *PortScanner) detectService(target string, port int) string {
+<<<<<<< HEAD
 	services := map[int]string{
 		21: "ftp", 22: "ssh", 23: "telnet", 25: "smtp",
 		53: "dns", 80: "http", 110: "pop3", 143: "imap",
@@ -295,6 +313,21 @@ func (s *PortScanner) detectService(target string, port int) string {
 		return s
 	}
 	return "unknown"
+=======
+	// Example implementation:
+	// 1. Connect to port
+	// 2. Read initial bytes (banner)
+	// 3. Match against known service signatures
+	// 4. Return service name
+	//
+	// Known patterns:
+	// - SSH: "SSH-2.0-"
+	// - HTTP: "HTTP/1.1" or HTML content
+	// - FTP: "220 "
+	// - SMTP: "220 " with mail server info
+
+	return "unknown" // Placeholder
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 }
 
 // PortScanResult represents the result of scanning a single port
