@@ -1,0 +1,44 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/session7-deployment/**"
+      - ".github/workflows/deploy-production.yml"
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            cd /home/ec2-user/app/session7-deployment
+
+            git pull origin main
+
+            docker compose up -d --build
+
+            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/001_create_assets.up.sql || true
+            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/002_create_scan_tables.up.sql || true
+            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/003_add_ip_tech_scan_types.up.sql || true
+
+            docker compose ps
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://thinh.servehttp.com || exit 1

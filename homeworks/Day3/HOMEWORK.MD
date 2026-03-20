@@ -1046,7 +1046,11 @@ script: |
 git add .
 git commit -m "Test auto deploy"
 git push origin main
+<<<<<<< HEAD
+
+=======
 #test (bài 9)
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 # Watch GitHub Actions
 # Check deployment on server
 ```

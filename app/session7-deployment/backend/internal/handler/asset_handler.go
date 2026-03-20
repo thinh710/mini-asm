@@ -1,9 +1,17 @@
 package handler
 
 import (
+<<<<<<< HEAD
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
+=======
+	"encoding/json"
+	"net/http"
+	"strconv"
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 
 	"mini-asm/internal/model"
 	"mini-asm/internal/service"
@@ -175,6 +183,42 @@ func contains(s, substr string) bool {
 			len(s) > len(substr)*2))
 }
 
+<<<<<<< HEAD
+// bài 6 xuất csv
+// ExportAssets exports all assets as CSV
+func (h *AssetHandler) ExportAssets(w http.ResponseWriter, r *http.Request) {
+	params := storage.QueryParams{
+		Page:     1,
+		PageSize: 10000,
+	}
+	result, err := h.service.ListAssets(params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=assets.csv")
+
+	writer := csv.NewWriter(w)
+	defer writer.Flush()
+
+	writer.Write([]string{"id", "name", "type", "status", "created_at", "updated_at"})
+
+	for _, asset := range result.Data {
+		writer.Write([]string{
+			asset.ID,
+			asset.Name,
+			asset.Type,
+			asset.Status,
+			asset.CreatedAt.Format(time.RFC3339),
+			asset.UpdatedAt.Format(time.RFC3339),
+		})
+	}
+}
+
+=======
+>>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 /*
 🎓 TEACHING NOTES:
 
