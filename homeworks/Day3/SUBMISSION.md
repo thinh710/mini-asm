@@ -10,4 +10,4 @@
 - [x] Bài 6: Tính năng EASM mới (Bonus)
 - [x] Bài 7: Deploy lên Cloud VM (Bonus)
 - [x] Bài 8: Domain & TLS/HTTPS (Bonus)
-- [ ] Bài 9: Auto Deploy on Merge (Bonus)
+- [x] Bài 9: Auto Deploy on Merge (Bonus)
