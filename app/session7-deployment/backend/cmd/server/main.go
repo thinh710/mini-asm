@@ -80,6 +80,7 @@ func main() {
 	// Asset CRUD operations (Session 2-4)
 	mux.HandleFunc("POST /assets", assetHandler.CreateAsset)
 	mux.HandleFunc("GET /assets", assetHandler.ListAssets)
+	mux.HandleFunc("GET /assets/export", assetHandler.ExportAssets)
 	mux.HandleFunc("GET /assets/{id}", assetHandler.GetAsset)
 	mux.HandleFunc("PUT /assets/{id}", assetHandler.UpdateAsset)
 	mux.HandleFunc("DELETE /assets/{id}", assetHandler.DeleteAsset)

@@ -97,6 +97,10 @@ function Assets() {
     });
     setShowModal(true);
   };
+  
+  const handleExport = () => {
+  window.open("/api/assets/export", "_blank");
+};
 
   const getTypeIcon = (type) => {
     switch (type) {
@@ -159,6 +163,12 @@ function Assets() {
           </select>
         </div>
         <div className="actions-group">
+          <button
+            className="btn btn-secondary"
+            onClick={handleExport}
+          >
+            ⬇ Export CSV
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => {
