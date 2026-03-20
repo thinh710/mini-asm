@@ -234,7 +234,18 @@ func (s *PortScanner) Scan(asset *model.Asset) ([]PortScanResult, error) {
 	// }
 	// return results, nil
 
-	return nil, fmt.Errorf("not implemented - student exercise")
+	results := []PortScanResult{}
+	for _, port := range s.commonPorts {
+		if s.scanPort(target, port) {
+			service := s.detectService(target, port)
+			results = append(results, PortScanResult{
+				Port:    port,
+				State:   "open",
+				Service: service,
+			})
+		}
+	}
+	return results, nil
 }
 
 // isAuthorized checks if target is in the authorized list
@@ -262,34 +273,28 @@ func (s *PortScanner) isAuthorized(target string) bool {
 // scanPort attempts to connect to a single port
 // TODO for students: Implement this method
 func (s *PortScanner) scanPort(target string, port int) bool {
-	// Example implementation:
-	// address := fmt.Sprintf("%s:%d", target, port)
-	// conn, err := net.DialTimeout("tcp", address, s.timeout)
-	// if err != nil {
-	//     return false // Port closed or filtered
-	// }
-	// conn.Close()
-	// return true // Port open
-
-	return false // Placeholder
+	address := fmt.Sprintf("%s:%d", target, port)
+	conn, err := net.DialTimeout("tcp", address, s.timeout)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 // detectService attempts to identify the service running on an open port
 // TODO for students: Implement service detection (banner grabbing)
 func (s *PortScanner) detectService(target string, port int) string {
-	// Example implementation:
-	// 1. Connect to port
-	// 2. Read initial bytes (banner)
-	// 3. Match against known service signatures
-	// 4. Return service name
-	//
-	// Known patterns:
-	// - SSH: "SSH-2.0-"
-	// - HTTP: "HTTP/1.1" or HTML content
-	// - FTP: "220 "
-	// - SMTP: "220 " with mail server info
-
-	return "unknown" // Placeholder
+	services := map[int]string{
+		21: "ftp", 22: "ssh", 23: "telnet", 25: "smtp",
+		53: "dns", 80: "http", 110: "pop3", 143: "imap",
+		443: "https", 445: "smb", 3306: "mysql",
+		3389: "rdp", 5432: "postgresql", 8080: "http-alt",
+	}
+	if s, ok := services[port]; ok {
+		return s
+	}
+	return "unknown"
 }
 
 // PortScanResult represents the result of scanning a single port

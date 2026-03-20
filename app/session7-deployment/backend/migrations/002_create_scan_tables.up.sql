@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS scan_jobs (
     id UUID PRIMARY KEY,
     asset_id UUID NOT NULL,
     scan_type VARCHAR(50) NOT NULL 
-        CHECK (scan_type IN ('subdomain', 'dns', 'whois', 'port', 'asn', 'ssl','all')),  -- Type of scan
+        CHECK (scan_type IN ('subdomain', 'dns', 'whois', 'port', 'asn', 'ssl','all','ip', 'tech')),  -- Type of scan
     status VARCHAR(50) NOT NULL 
         CHECK (status IN ('pending', 'running', 'completed', 'failed', 'partial')),
     started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

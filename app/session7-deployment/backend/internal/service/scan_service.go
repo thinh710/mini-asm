@@ -10,6 +10,9 @@ import (
 	"mini-asm/internal/scanner"
 	"mini-asm/internal/storage"
 
+	"crypto/tls"
+	"log"
+
 	"github.com/google/uuid"
 )
 
@@ -20,6 +23,8 @@ type ScanService struct {
 	dnsScanner       *scanner.DNSScanner
 	whoisScanner     *scanner.WHOISScanner
 	subdomainScanner *scanner.SubdomainScanner
+	portScanner      *scanner.PortScanner
+	ipScanner        *scanner.IPScanner
 }
 
 // NewScanService creates a new scan service instance
@@ -35,6 +40,8 @@ func NewScanService(store storage.Storage, scanStore storage.ScanStorage) (*Scan
 		dnsScanner:       scanner.NewDNSScanner(),
 		whoisScanner:     scanner.NewWHOISScanner(),
 		subdomainScanner: subdomainScanner,
+		portScanner:      scanner.NewPortScanner(),
+		ipScanner:        scanner.NewIPScanner(),
 	}, nil
 }
 
@@ -93,6 +100,12 @@ func (s *ScanService) performScan(asset *model.Asset, job *model.ScanJob) {
 		err = s.performWHOISScan(asset, job)
 	case model.ScanTypeSubdomain:
 		err = s.performSubdomainScan(asset, job)
+	case model.ScanTypePort:
+		err = s.performPortScan(asset, job)
+	case model.ScanTypeIP:
+		err = s.performIPScan(asset, job)
+	case model.ScanTypeSSL:
+		err = s.performSSLScan(asset, job)
 	default:
 		err = fmt.Errorf("unsupported scan type: %s", job.ScanType)
 	}
@@ -622,6 +635,51 @@ func (s *ScanService) GetAssetAllScanResults(assetID string) (map[string]interfa
 		"whois_records": whoisRecord,
 		"subdomains":    subdomains,
 	}, nil
+}
+
+// bài 1
+func (s *ScanService) performPortScan(asset *model.Asset, job *model.ScanJob) error {
+	results, err := s.portScanner.Scan(asset)
+	if err != nil {
+		return err
+	}
+	job.Results = len(results)
+	// TODO: lưu kết quả vào storage nếu có table
+	return nil
+}
+
+func (s *ScanService) performIPScan(asset *model.Asset, job *model.ScanJob) error {
+	result, err := s.ipScanner.Scan(asset)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		job.Results = 1
+	}
+	return nil
+}
+func (s *ScanService) performSSLScan(asset *model.Asset, job *model.ScanJob) error {
+	if asset.Type != model.TypeDomain {
+		return fmt.Errorf("SSL scan requires domain asset, got: %s", asset.Type)
+	}
+
+	// Basic SSL check using crypto/tls
+	conn, err := tls.Dial("tcp", asset.Name+":443", &tls.Config{
+		InsecureSkipVerify: false,
+	})
+	if err != nil {
+		return fmt.Errorf("SSL connection failed: %w", err)
+	}
+	defer conn.Close()
+
+	cert := conn.ConnectionState().PeerCertificates[0]
+	daysLeft := int(time.Until(cert.NotAfter).Hours() / 24)
+
+	log.Printf("SSL cert for %s: valid until %s (%d days left)",
+		asset.Name, cert.NotAfter.Format(time.DateOnly), daysLeft)
+
+	job.Results = 1
+	return nil
 }
 
 /*

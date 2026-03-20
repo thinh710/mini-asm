@@ -36,6 +36,10 @@ const (
 	ScanTypePort ScanType = "port" // Port scanning (TCP/UDP probes)
 	ScanTypeASN  ScanType = "asn"  // ASN lookup (passive, but included for organization)
 	ScanTypeSSL  ScanType = "ssl"  // SSL/TLS probing
+
+   // Thêm vào nhóm Active Scans
+   ScanTypeIP   ScanType = "ip"   // IP geolocation + ASN (NEW)
+   ScanTypeTech ScanType = "tech" // Technology detection (NEW - bonus)
 )
 
 // ScanStatus represents the status of a scan
@@ -102,20 +106,21 @@ type WHOISRecord struct {
 
 // IsValidScanType checks if the given scan type is valid
 func IsValidScanType(t ScanType) bool {
-	switch t {
-	case ScanTypeAll, ScanTypeSubdomain, ScanTypeDNS, ScanTypeWHOIS, ScanTypeCertTrans,
-		ScanTypePort, ScanTypeASN, ScanTypeSSL:
-		return true
-	}
-	return false
+    switch t {
+    case ScanTypeAll, ScanTypeSubdomain, ScanTypeDNS, ScanTypeWHOIS, ScanTypeCertTrans,
+        ScanTypePort, ScanTypeASN, ScanTypeSSL,
+        ScanTypeIP, ScanTypeTech: 
+        return true
+    }
+    return false
 }
 
 // Category returns the reconnaissance category for this scan type
 func (st ScanType) Category() ScanCategory {
 	switch st {
 	// Passive scans - safe, OSINT-based
-	case ScanTypeAll, ScanTypeDNS, ScanTypeWHOIS, ScanTypeSubdomain, ScanTypeCertTrans, ScanTypeASN:
-		return ScanCategoryPassive
+	case ScanTypeAll, ScanTypeDNS, ScanTypeWHOIS, ScanTypeSubdomain, ScanTypeCertTrans, ScanTypeASN, ScanTypeIP:
+    return ScanCategoryPassive
 
 	// Active scans - require permission
 	case ScanTypePort, ScanTypeSSL:
@@ -162,6 +167,10 @@ func (st ScanType) Description() string {
 		return "Port scanning for open services (⚠️ active - requires permission)"
 	case ScanTypeSSL:
 		return "SSL/TLS certificate probing (⚠️ active - requires permission)"
+   case ScanTypeIP:
+      return "IP geolocation and ASN lookup (passive)"
+   case ScanTypeTech:
+      return "Technology detection via HTTP headers (passive)"
 	default:
 		return string(st)
 	}

@@ -13,6 +13,22 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
+// corsMiddleware cho phép frontend gọi API từ browser
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	log.Println("🚀 Starting Mini ASM Server (Session 5 - EASM Scanning)...")
 
@@ -143,7 +159,7 @@ func main() {
 	log.Println()
 	log.Println("Press Ctrl+C to stop")
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, corsMiddleware(mux)); err != nil {
 		log.Fatal("❌ Server failed to start:", err)
 	}
 }
