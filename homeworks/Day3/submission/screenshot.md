@@ -54,3 +54,4 @@
     ![alt text](image-27.png)
 - Bài 9 : 
     ![alt text](image-28.png)
+  <img width="1920" height="752" alt="image" src="https://github.com/user-attachments/assets/7c21b45c-93e3-4120-8d80-1781d1f286b2" />
