@@ -26,17 +26,89 @@ jobs:
           script: |
             set -e
 
-            cd /home/ec2-user/app/session7-deployment
+            REPO_DIR=/home/ec2-user/mini-asm
+            APP_DIR=$REPO_DIR/app/session7-deployment
+            NETWORK=mini-asm-net
 
-            git pull origin main
+            DB_CONTAINER=postgres-db
+            BACKEND_CONTAINER=backend
+            FRONTEND_CONTAINER=my-frontend
+            CADDY_CONTAINER=caddy
 
-            docker compose up -d --build
+            echo "===> Update source code"
+            cd "$REPO_DIR"
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
 
-            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/001_create_assets.up.sql || true
-            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/002_create_scan_tables.up.sql || true
-            docker compose exec -T db psql -U postgres -d mini_asm < backend/migrations/003_add_ip_tech_scan_types.up.sql || true
+            echo "===> Go to app directory"
+            cd "$APP_DIR"
 
-            docker compose ps
+            echo "===> Ensure Docker network exists"
+            docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK"
+
+            echo "===> Ensure Postgres is running"
+            if ! docker ps -a --format '{{.Names}}' | grep -Fxq "$DB_CONTAINER"; then
+              docker run -d \
+                --name "$DB_CONTAINER" \
+                --network "$NETWORK" \
+                -e POSTGRES_USER=postgres \
+                -e POSTGRES_PASSWORD=postgres \
+                -e POSTGRES_DB=mini_asm \
+                -v postgres_data:/var/lib/postgresql/data \
+                -p 5432:5432 \
+                postgres:16
+            else
+              docker start "$DB_CONTAINER" >/dev/null 2>&1 || true
+              docker network connect "$NETWORK" "$DB_CONTAINER" >/dev/null 2>&1 || true
+            fi
+
+            echo "===> Wait for Postgres to be ready"
+            until docker exec "$DB_CONTAINER" pg_isready -U postgres -d mini_asm >/dev/null 2>&1; do
+              sleep 2
+            done
+
+            echo "===> Run migrations"
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d mini_asm < backend/migrations/001_create_assets.up.sql || true
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d mini_asm < backend/migrations/002_create_scan_tables.up.sql || true
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d mini_asm < backend/migrations/003_add_ip_tech_scan_types.up.sql || true
+
+            echo "===> Rebuild backend"
+            docker rm -f "$BACKEND_CONTAINER" >/dev/null 2>&1 || true
+            docker build --no-cache -t my-go-app ./backend
+            docker run -d \
+              --name "$BACKEND_CONTAINER" \
+              --network "$NETWORK" \
+              -e DB_HOST="$DB_CONTAINER" \
+              -e DB_PORT=5432 \
+              -e DB_USER=postgres \
+              -e DB_PASSWORD=postgres \
+              -e DB_NAME=mini_asm \
+              -p 8080:8080 \
+              my-go-app
+
+            echo "===> Rebuild frontend"
+            docker rm -f "$FRONTEND_CONTAINER" >/dev/null 2>&1 || true
+            docker build --no-cache -t my-frontend ./frontend
+            docker run -d \
+              --name "$FRONTEND_CONTAINER" \
+              --network "$NETWORK" \
+              my-frontend
+
+            echo "===> Restart Caddy"
+            docker rm -f "$CADDY_CONTAINER" >/dev/null 2>&1 || true
+            docker run -d \
+              --name "$CADDY_CONTAINER" \
+              --network "$NETWORK" \
+              -p 80:80 \
+              -p 443:443 \
+              -v "/home/ec2-user/Caddyfile:/etc/caddy/Caddyfile:ro" \
+              -v caddy_data:/data \
+              -v caddy_config:/config \
+              caddy:2
+
+            echo "===> Running containers"
+            docker ps
 
       - name: Health check
         run: |
