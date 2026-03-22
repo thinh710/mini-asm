@@ -36,13 +36,10 @@ const (
 	ScanTypePort ScanType = "port" // Port scanning (TCP/UDP probes)
 	ScanTypeASN  ScanType = "asn"  // ASN lookup (passive, but included for organization)
 	ScanTypeSSL  ScanType = "ssl"  // SSL/TLS probing
-<<<<<<< HEAD
 
-   // Thêm vào nhóm Active Scans
-   ScanTypeIP   ScanType = "ip"   // IP geolocation + ASN (NEW)
-   ScanTypeTech ScanType = "tech" // Technology detection (NEW - bonus)
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
+	// Thêm vào nhóm Active Scans
+	ScanTypeIP   ScanType = "ip"   // IP geolocation + ASN (NEW)
+	ScanTypeTech ScanType = "tech" // Technology detection (NEW - bonus)
 )
 
 // ScanStatus represents the status of a scan
@@ -109,35 +106,24 @@ type WHOISRecord struct {
 
 // IsValidScanType checks if the given scan type is valid
 func IsValidScanType(t ScanType) bool {
-<<<<<<< HEAD
-    switch t {
-    case ScanTypeAll, ScanTypeSubdomain, ScanTypeDNS, ScanTypeWHOIS, ScanTypeCertTrans,
-        ScanTypePort, ScanTypeASN, ScanTypeSSL,
-        ScanTypeIP, ScanTypeTech: 
-        return true
-    }
-    return false
-=======
+
 	switch t {
 	case ScanTypeAll, ScanTypeSubdomain, ScanTypeDNS, ScanTypeWHOIS, ScanTypeCertTrans,
-		ScanTypePort, ScanTypeASN, ScanTypeSSL:
+		ScanTypePort, ScanTypeASN, ScanTypeSSL,
+		ScanTypeIP, ScanTypeTech:
 		return true
 	}
 	return false
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
+
 }
 
 // Category returns the reconnaissance category for this scan type
 func (st ScanType) Category() ScanCategory {
 	switch st {
 	// Passive scans - safe, OSINT-based
-<<<<<<< HEAD
+
 	case ScanTypeAll, ScanTypeDNS, ScanTypeWHOIS, ScanTypeSubdomain, ScanTypeCertTrans, ScanTypeASN, ScanTypeIP:
-    return ScanCategoryPassive
-=======
-	case ScanTypeAll, ScanTypeDNS, ScanTypeWHOIS, ScanTypeSubdomain, ScanTypeCertTrans, ScanTypeASN:
 		return ScanCategoryPassive
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 
 	// Active scans - require permission
 	case ScanTypePort, ScanTypeSSL:
@@ -184,13 +170,12 @@ func (st ScanType) Description() string {
 		return "Port scanning for open services (⚠️ active - requires permission)"
 	case ScanTypeSSL:
 		return "SSL/TLS certificate probing (⚠️ active - requires permission)"
-<<<<<<< HEAD
-   case ScanTypeIP:
-      return "IP geolocation and ASN lookup (passive)"
-   case ScanTypeTech:
-      return "Technology detection via HTTP headers (passive)"
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
+
+	case ScanTypeIP:
+		return "IP geolocation and ASN lookup (passive)"
+	case ScanTypeTech:
+		return "Technology detection via HTTP headers (passive)"
+
 	default:
 		return string(st)
 	}

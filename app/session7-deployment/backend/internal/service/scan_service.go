@@ -6,16 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"crypto/tls"
+	"log"
+
 	"mini-asm/internal/model"
 	"mini-asm/internal/scanner"
 	"mini-asm/internal/storage"
 
-<<<<<<< HEAD
-	"crypto/tls"
-	"log"
-
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 	"github.com/google/uuid"
 )
 
@@ -26,11 +23,8 @@ type ScanService struct {
 	dnsScanner       *scanner.DNSScanner
 	whoisScanner     *scanner.WHOISScanner
 	subdomainScanner *scanner.SubdomainScanner
-<<<<<<< HEAD
 	portScanner      *scanner.PortScanner
 	ipScanner        *scanner.IPScanner
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 }
 
 // NewScanService creates a new scan service instance
@@ -46,11 +40,8 @@ func NewScanService(store storage.Storage, scanStore storage.ScanStorage) (*Scan
 		dnsScanner:       scanner.NewDNSScanner(),
 		whoisScanner:     scanner.NewWHOISScanner(),
 		subdomainScanner: subdomainScanner,
-<<<<<<< HEAD
 		portScanner:      scanner.NewPortScanner(),
 		ipScanner:        scanner.NewIPScanner(),
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 	}, nil
 }
 
@@ -109,15 +100,12 @@ func (s *ScanService) performScan(asset *model.Asset, job *model.ScanJob) {
 		err = s.performWHOISScan(asset, job)
 	case model.ScanTypeSubdomain:
 		err = s.performSubdomainScan(asset, job)
-<<<<<<< HEAD
 	case model.ScanTypePort:
 		err = s.performPortScan(asset, job)
 	case model.ScanTypeIP:
 		err = s.performIPScan(asset, job)
 	case model.ScanTypeSSL:
 		err = s.performSSLScan(asset, job)
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 	default:
 		err = fmt.Errorf("unsupported scan type: %s", job.ScanType)
 	}
@@ -649,7 +637,6 @@ func (s *ScanService) GetAssetAllScanResults(assetID string) (map[string]interfa
 	}, nil
 }
 
-<<<<<<< HEAD
 // bài 1
 func (s *ScanService) performPortScan(asset *model.Asset, job *model.ScanJob) error {
 	results, err := s.portScanner.Scan(asset)
@@ -695,8 +682,6 @@ func (s *ScanService) performSSLScan(asset *model.Asset, job *model.ScanJob) err
 	return nil
 }
 
-=======
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 /*
  NOTES - Scan Service
 

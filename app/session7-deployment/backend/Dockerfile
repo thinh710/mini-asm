@@ -1,12 +1,6 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-<<<<<<< HEAD
-
-=======
-# Install build dependencies
-RUN apk add --no-cache git
->>>>>>> 06a29df9dd8c1aa2ff9f92d41ebf86afba088a43
 
 # Set working directory
 WORKDIR /app
