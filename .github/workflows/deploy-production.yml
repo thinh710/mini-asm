@@ -119,3 +119,5 @@ jobs:
           sleep 30
           curl -f https://thinh.servehttp.com || exit 1
           curl -f https://thinh.servehttp.com/api/assets || exit 1
+
+#test khi deploy xong, có thể mất vài giây để backend và frontend khởi động, nên mình sleep 30 giây trước khi health check. Nếu health check fail, workflow sẽ fail và mình sẽ biết có vấn đề gì đó với deployment.
