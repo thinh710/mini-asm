@@ -39,7 +39,11 @@ jobs:
             cd "$REPO_DIR"
             git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
             git fetch origin --prune
+            git reset --hard
+            git clean -fd
             git checkout -B main origin/main
+            git reset --hard origin/main
+            git clean -fd
 
             echo "===> Go to app directory"
             cd "$APP_DIR"
