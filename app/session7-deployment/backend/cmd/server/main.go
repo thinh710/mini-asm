@@ -1,5 +1,6 @@
 package main
 
+// This is the main entry point for the Mini ASM server application.
 // Mini ASM - Asset Management System
 import (
 	"log"
