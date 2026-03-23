@@ -24,6 +24,7 @@ type IPResult struct {
 	ASN         ASNInfo   `json:"asn"`
 	ReverseDNS  string    `json:"reverse_dns"`
 	CreatedAt   time.Time `json:"created_at"`
+	test        time.Time `json:"timestamp"`
 }
 
 type GeoInfo struct {
