@@ -106,7 +106,7 @@ jobs:
               --network "$NETWORK" \
               -p 80:80 \
               -p 443:443 \
-              -v "/home/ec2-user/Caddyfile:/etc/caddy/Caddyfile:ro" \
+              -v "$APP_DIR/Caddyfile:/etc/caddy/Caddyfile:ro" \
               -v caddy_data:/data \
               -v caddy_config:/config \
               caddy:2
