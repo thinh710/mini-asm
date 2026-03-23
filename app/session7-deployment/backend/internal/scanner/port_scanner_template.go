@@ -270,6 +270,10 @@ func (s *PortScanner) isAuthorized(target string) bool {
 	return false
 }
 
+func (s *PortScanner) GetCommonPorts() []int {
+	return s.commonPorts
+}
+
 // scanPort attempts to connect to a single port
 // TODO for students: Implement this method
 func (s *PortScanner) scanPort(target string, port int) bool {

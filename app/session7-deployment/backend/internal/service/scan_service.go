@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
 	"sync"
 	"time"
-
-	"crypto/tls"
-	"log"
 
 	"mini-asm/internal/model"
 	"mini-asm/internal/scanner"
@@ -15,6 +16,77 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// IPResult chứa kết quả IP scan
+type IPResult struct {
+	IPAddress   string    `json:"ip_address"`
+	Geolocation GeoInfo   `json:"geolocation"`
+	ASN         ASNInfo   `json:"asn"`
+	ReverseDNS  string    `json:"reverse_dns"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type GeoInfo struct {
+	Country     string  `json:"country"`
+	CountryCode string  `json:"country_code"`
+	City        string  `json:"city"`
+	Region      string  `json:"region"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	ISP         string  `json:"isp"`
+	Org         string  `json:"org"`
+}
+
+type ASNInfo struct {
+	Number      string `json:"number"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// SSLResult chứa kết quả SSL scan
+type SSLResult struct {
+	Domain      string      `json:"domain"`
+	Certificate SSLCertInfo `json:"certificate"`
+	Connection  SSLConnInfo `json:"connection"`
+	Grade       string      `json:"grade"`
+	Issues      []string    `json:"issues"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
+type SSLCertInfo struct {
+	Subject         string    `json:"subject"`
+	Issuer          string    `json:"issuer"`
+	SerialNumber    string    `json:"serial_number"`
+	ValidFrom       time.Time `json:"valid_from"`
+	ValidUntil      time.Time `json:"valid_until"`
+	DaysUntilExpiry int       `json:"days_until_expiry"`
+	IsExpired       bool      `json:"is_expired"`
+	IsSelfSigned    bool      `json:"is_self_signed"`
+	SAN             []string  `json:"san"`
+}
+
+type SSLConnInfo struct {
+	TLSVersion  string `json:"tls_version"`
+	CipherSuite string `json:"cipher_suite"`
+}
+
+// PortResult chứa kết quả Port scan
+type PortResult struct {
+	IPAddress      string     `json:"ip_address"`
+	OpenPorts      []PortInfo `json:"open_ports"`
+	ClosedPorts    int        `json:"closed_ports"`
+	TotalScanned   int        `json:"total_scanned"`
+	ScanDurationMs int64      `json:"scan_duration_ms"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type PortInfo struct {
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	State    string `json:"state"`
+	Service  string `json:"service"`
+	Version  string `json:"version"`
+}
 
 // ScanService handles scan operations
 type ScanService struct {
@@ -596,6 +668,57 @@ func (s *ScanService) GetScanResults(jobID string) (interface{}, error) {
 		return s.scanStorage.GetWHOISRecordsByScan(jobID)
 	case model.ScanTypeSubdomain:
 		return s.scanStorage.GetSubdomainsByScan(jobID)
+	case model.ScanTypePort:
+		var portResult PortResult
+		if err := json.Unmarshal([]byte(job.Error), &portResult); err != nil {
+			return map[string]interface{}{
+				"job_id":    job.ID,
+				"scan_type": "port",
+				"results":   []interface{}{},
+			}, nil
+		}
+		return map[string]interface{}{
+			"job_id":    job.ID,
+			"scan_type": "port",
+			"results":   []PortResult{portResult},
+		}, nil
+
+	case model.ScanTypeIP:
+		var ipResult IPResult
+		if err := json.Unmarshal([]byte(job.Error), &ipResult); err != nil {
+			return map[string]interface{}{
+				"job_id":    job.ID,
+				"scan_type": "ip",
+				"results":   []interface{}{},
+			}, nil
+		}
+		return map[string]interface{}{
+			"job_id":    job.ID,
+			"scan_type": "ip",
+			"results":   []IPResult{ipResult},
+		}, nil
+		return map[string]any{
+			"job_id":    job.ID,
+			"scan_type": string(job.ScanType),
+			"status":    string(job.Status),
+			"results":   job.Results,
+			"message":   "scan completed successfully",
+		}, nil
+
+	case model.ScanTypeSSL:
+		var sslResult SSLResult
+		if err := json.Unmarshal([]byte(job.Error), &sslResult); err != nil {
+			return map[string]interface{}{
+				"job_id":    job.ID,
+				"scan_type": "ssl",
+				"results":   []interface{}{},
+			}, nil
+		}
+		return map[string]interface{}{
+			"job_id":    job.ID,
+			"scan_type": "ssl",
+			"results":   []SSLResult{sslResult},
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported scan type: %s", job.ScanType)
 	}
@@ -639,23 +762,100 @@ func (s *ScanService) GetAssetAllScanResults(assetID string) (map[string]interfa
 
 // bài 1
 func (s *ScanService) performPortScan(asset *model.Asset, job *model.ScanJob) error {
-	results, err := s.portScanner.Scan(asset)
+	startTime := time.Now()
+
+	rawResults, err := s.portScanner.Scan(asset)
 	if err != nil {
 		return err
 	}
-	job.Results = len(results)
-	// TODO: lưu kết quả vào storage nếu có table
+
+	// Convert sang PortInfo
+	openPorts := []PortInfo{}
+	for _, r := range rawResults {
+		openPorts = append(openPorts, PortInfo{
+			Port:     r.Port,
+			Protocol: "tcp",
+			State:    r.State,
+			Service:  r.Service,
+			Version:  r.Version,
+		})
+	}
+
+	result := PortResult{
+		IPAddress:      asset.Name,
+		OpenPorts:      openPorts,
+		ClosedPorts:    len(s.portScanner.GetCommonPorts()) - len(openPorts),
+		TotalScanned:   len(s.portScanner.GetCommonPorts()),
+		ScanDurationMs: time.Since(startTime).Milliseconds(),
+		CreatedAt:      time.Now(),
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("failed to marshal port result: %w", err)
+	}
+	job.Error = string(resultJSON)
+	job.Results = len(openPorts)
 	return nil
 }
 
 func (s *ScanService) performIPScan(asset *model.Asset, job *model.ScanJob) error {
-	result, err := s.ipScanner.Scan(asset)
+	raw, err := s.ipScanner.Scan(asset)
 	if err != nil {
 		return err
 	}
-	if result != nil {
-		job.Results = 1
+	if raw == nil {
+		return nil
 	}
+
+	// Lookup reverse DNS
+	reverseDNS := ""
+	hosts, err := net.LookupAddr(asset.Name)
+	if err == nil && len(hosts) > 0 {
+		reverseDNS = hosts[0]
+	}
+
+	// Parse ASN từ field "as" của ip-api.com
+	// Format: "AS13335 Cloudflare, Inc."
+	asnNumber := ""
+	asnName := ""
+	if raw.ASN != "" {
+		parts := strings.SplitN(raw.ASN, " ", 2)
+		if len(parts) >= 1 {
+			asnNumber = parts[0]
+		}
+		if len(parts) >= 2 {
+			asnName = parts[1]
+		}
+	}
+
+	result := IPResult{
+		IPAddress: asset.Name,
+		Geolocation: GeoInfo{
+			Country:     raw.Country,
+			CountryCode: raw.CountryCode,
+			City:        raw.City,
+			Region:      raw.Region,
+			Latitude:    raw.Latitude,
+			Longitude:   raw.Longitude,
+			ISP:         raw.ISP,
+			Org:         raw.Org,
+		},
+		ASN: ASNInfo{
+			Number:      asnNumber,
+			Name:        asnName,
+			Description: raw.Org,
+		},
+		ReverseDNS: reverseDNS,
+		CreatedAt:  time.Now(),
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("failed to marshal IP result: %w", err)
+	}
+	job.Error = string(resultJSON)
+	job.Results = 1
 	return nil
 }
 func (s *ScanService) performSSLScan(asset *model.Asset, job *model.ScanJob) error {
@@ -663,7 +863,6 @@ func (s *ScanService) performSSLScan(asset *model.Asset, job *model.ScanJob) err
 		return fmt.Errorf("SSL scan requires domain asset, got: %s", asset.Type)
 	}
 
-	// Basic SSL check using crypto/tls
 	conn, err := tls.Dial("tcp", asset.Name+":443", &tls.Config{
 		InsecureSkipVerify: false,
 	})
@@ -675,9 +874,58 @@ func (s *ScanService) performSSLScan(asset *model.Asset, job *model.ScanJob) err
 	cert := conn.ConnectionState().PeerCertificates[0]
 	daysLeft := int(time.Until(cert.NotAfter).Hours() / 24)
 
-	log.Printf("SSL cert for %s: valid until %s (%d days left)",
-		asset.Name, cert.NotAfter.Format(time.DateOnly), daysLeft)
+	// TLS version
+	tlsVersion := "TLS 1.2"
+	if conn.ConnectionState().Version == tls.VersionTLS13 {
+		tlsVersion = "TLS 1.3"
+	}
 
+	// Cipher suite
+	cipherSuite := tls.CipherSuiteName(conn.ConnectionState().CipherSuite)
+
+	// Grade
+	grade := "A"
+	issues := []string{}
+	if daysLeft < 30 {
+		grade = "B"
+		issues = append(issues, fmt.Sprintf("Certificate expires in %d days", daysLeft))
+	}
+	if cert.NotAfter.Before(time.Now()) {
+		grade = "F"
+		issues = append(issues, "Certificate is expired")
+	}
+
+	// SAN
+	san := cert.DNSNames
+
+	result := SSLResult{
+		Domain: asset.Name,
+		Certificate: SSLCertInfo{
+			Subject:         cert.Subject.CommonName,
+			Issuer:          cert.Issuer.CommonName,
+			SerialNumber:    cert.SerialNumber.String(),
+			ValidFrom:       cert.NotBefore,
+			ValidUntil:      cert.NotAfter,
+			DaysUntilExpiry: daysLeft,
+			IsExpired:       cert.NotAfter.Before(time.Now()),
+			IsSelfSigned:    cert.Issuer.CommonName == cert.Subject.CommonName,
+			SAN:             san,
+		},
+		Connection: SSLConnInfo{
+			TLSVersion:  tlsVersion,
+			CipherSuite: cipherSuite,
+		},
+		Grade:     grade,
+		Issues:    issues,
+		CreatedAt: time.Now(),
+	}
+
+	// Lưu kết quả dạng JSON vào job.Error (tạm dùng field này để lưu)
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("failed to marshal SSL result: %w", err)
+	}
+	job.Error = string(resultJSON)
 	job.Results = 1
 	return nil
 }
