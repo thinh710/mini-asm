@@ -119,3 +119,4 @@ jobs:
           sleep 30
           curl -f https://thinh.servehttp.com || exit 1
           curl -f https://thinh.servehttp.com/api/assets || exit 1
+
