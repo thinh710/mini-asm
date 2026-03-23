@@ -32,11 +32,35 @@ function Dashboard() {
         page_size: 1,
       });
 
+      // Get scan stats - lấy tất cả assets rồi đếm scan jobs
+      let totalScans = 0;
+      let completedScans = 0;
+
+      try {
+        const allAssets = await assetsAPI.list({ page: 1, page_size: 100 });
+        const assetList = allAssets.data || [];
+
+        const scanPromises = assetList.map((asset) =>
+          scanningAPI
+            .listJobs(asset.id, { page_size: 100 })
+            .catch(() => ({ data: [] }))
+        );
+        const scanResults = await Promise.all(scanPromises);
+
+        scanResults.forEach((result) => {
+          const jobs = result.data || [];
+          totalScans += jobs.length;
+          completedScans += jobs.filter((j) => j.status === "completed").length;
+        });
+      } catch (e) {
+        console.error("Failed to load scan stats:", e);
+      }
+
       setStats({
         totalAssets: assetsData.total || 0,
         activeAssets: activeAssetsData.total || 0,
-        totalScans: 0, // Would need aggregate endpoint
-        completedScans: 0, // Would need aggregate endpoint
+        totalScans,
+        completedScans,
       });
     } catch (error) {
       console.error("Failed to load dashboard:", error);
@@ -62,20 +86,6 @@ function Dashboard() {
           Overview of your External Attack Surface Management system
         </p>
       </div>
-
-      {/* Health Status */}
-      {/* {health && (
-        <div className="alert alert-success mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <strong>System Status:</strong> {health.status}
-            </div>
-            <div className="text-sm">
-              Uptime: {Math.floor(health.uptime_seconds / 60)} minutes
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {/* Stats Grid */}
       <div className="stats-grid">
@@ -160,6 +170,9 @@ function Dashboard() {
             </li>
             <li>
               <strong>ASN Lookup:</strong> Autonomous System information
+            </li>
+            <li>
+              <strong>IP Geolocation:</strong> IP location and ASN lookup
             </li>
           </ul>
         </div>
